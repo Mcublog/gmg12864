@@ -466,8 +466,8 @@ static void GMG12864_Send_command(uint8_t Command)
     /// Функция отправки команды на дисплей
     /// \param Command - 8 бит данных.
     DC_set();
-    HAL_SPI_Transmit(&hspi1, &Command, 1, HAL_MAX_DELAY);
-    while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
+    HAL_SPI_Transmit(&SPI_HANDLE, &Command, 1, HAL_MAX_DELAY);
+    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
         ;
     DC_reset();
 }
@@ -478,8 +478,8 @@ static void GMG12864_Send_command(uint8_t Command)
 /// \param Data - 8 бит данных.
 static void GMG12864_Send_data(uint8_t Dat)
 {
-    HAL_SPI_Transmit(&hspi1, &Dat, 1, HAL_MAX_DELAY);
-    while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY)
+    HAL_SPI_Transmit(&SPI_HANDLE, &Dat, 1, HAL_MAX_DELAY);
+    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
         ;
 }
 /*----------------------Функция отправки данных на дисплей------------------------*/
@@ -751,7 +751,7 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
     /// \param font - шрифт. 0 - 3x5, 1 - 5x7
     uint16_t symbol = 0;
     bool flag_block = 0;
-    for (int i = 0; i < strlen(tx_buffer); i++)
+    for (size_t i = 0; i < strlen(tx_buffer); i++)
     {
         if (tx_buffer[i] < 0xC0)
         { // Английский текст и символы. Если до русского текста, то [i] <0xD0. Но в font

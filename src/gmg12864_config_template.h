@@ -13,7 +13,8 @@
 #define DC_set()    do{DC_GPIO_Port->BSRR = (uint32_t) DC_Pin << 16u;}while(0)   //DC притягиваем к земле
 #define DC_reset()  do{DC_GPIO_Port-> BSRR = DC_Pin;}while(0)                    //DC притягиваем к 3.3v
 
-extern SPI_HandleTypeDef hspi1; //Используемая шина spi
+#define SPI_HANDLE (hspi2)
+extern SPI_HandleTypeDef SPI_HANDLE; //Используемая шина spi
 
 
 #endif // GMG12864_CONFIG_TEMPLATE_H
