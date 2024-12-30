@@ -20,8 +20,9 @@ Clock Phase (CPHA) 1 Edge
 Advanced Parameters:
 CRC Calculation Disabled
 NSS Signal Type Software
+```
 
-
+```c
 Функции:
 /*================= Демонстрационное лого. Можно вырезать. =====================*/
 void GMG12864_logo_demonstration(void);
