@@ -27,18 +27,15 @@
 #include "gmg_macros.h"
 #include "gmg12864_config.h"
 /*-----------------------------------Настройки----------------------------------*/
-char tx_buffer[128] = {0}; // Буфер для отправки текста на дисплей
-uint8_t Frame_buffer[1024] = {0}; // Буфер кадра
-uint8_t GMG12864_width = 128; // Ширина дисплея в пикселях
-uint8_t GMG12864_height = 64; // Высота дисплея в пикселях
+#define DISP_WIDTH (128U) // Ширина дисплея в пикселях
+#define DISP_HEIGHT (64U) // Высота дисплея в пикселях
+#define ARRAY_SIZE (100U)
+
+static char tx_buffer[DISP_WIDTH] = {0}; // Буфер для отправки текста на дисплей
+static uint8_t Frame_buffer[1024] = {0}; // Буфер кадра
 
 // Для работы отрисовки графика:
-uint8_t cnt = 0; // счетчик накопления значений в окне графика
-const uint8_t size_array =
-    100; // размер массива. В нашем случае ширина 100 точек(График 100*50 пикселей)
-uint8_t arr[100] = {0}; // значения на графике. Заполняются в определенный момент
-                        // времени(каждый шаг сдвига графика влево)
-bool array_is_full = 0; // значения заполнили массив, можно сдвигать график влево
+static bool array_is_full = 0; // значения заполнили массив, можно сдвигать график влево
 
 /*-----------------------------------Настройки----------------------------------*/
 
@@ -436,16 +433,16 @@ void GMG12864_logo_demonstration(void)
     GMG12864_Decode_UTF8(16, 40, 1, 0, tx_buffer);
     sprintf(tx_buffer, "electronics lab.");
     GMG12864_Decode_UTF8(18, 48, 1, 0, tx_buffer);
-    HAL_Delay(500);
+    DELAY_MS(500);
     GMG12864_Update();
-    HAL_Delay(3000);
+    DELAY_MS(3000);
     sprintf(tx_buffer, "                ");
     GMG12864_Decode_UTF8(18, 48, 1, 0, tx_buffer);
-    HAL_Delay(500);
+    DELAY_MS(500);
     GMG12864_Update();
     sprintf(tx_buffer, "                ");
     GMG12864_Decode_UTF8(16, 40, 1, 0, tx_buffer);
-    HAL_Delay(500);
+    DELAY_MS(500);
     GMG12864_Update();
 
     for (int i = 0; i < 369; i++)
@@ -453,7 +450,7 @@ void GMG12864_logo_demonstration(void)
         Frame_buffer[i + 265] = 0x00;
     }
     GMG12864_Update();
-    HAL_Delay(500);
+    DELAY_MS(500);
     GMG12864_Clean_Frame_buffer();
     GMG12864_Update();
 }
@@ -466,21 +463,25 @@ static void GMG12864_Send_command(uint8_t Command)
     /// Функция отправки команды на дисплей
     /// \param Command - 8 бит данных.
     DC_set();
+    cs_set();
     HAL_SPI_Transmit(&SPI_HANDLE, &Command, 1, HAL_MAX_DELAY);
     while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
         ;
+    cs_reset();
     DC_reset();
 }
 /*----------------------Функция отправки команды на дисплей------------------------*/
 
 /*----------------------Функция отправки данных на дисплей------------------------*/
-/// Функция отправки данных на дисплей
-/// \param Data - 8 бит данных.
-static void GMG12864_Send_data(uint8_t Dat)
+static void GMG12864_Send_data(uint8_t *data, uint16_t size)
 {
-    HAL_SPI_Transmit(&SPI_HANDLE, &Dat, 1, HAL_MAX_DELAY);
+    DC_reset();
+    cs_set();
+    HAL_SPI_Transmit(&SPI_HANDLE, data, size, HAL_MAX_DELAY);
     while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
         ;
+    cs_reset();
+    DC_set();
 }
 /*----------------------Функция отправки данных на дисплей------------------------*/
 
@@ -498,35 +499,34 @@ void GMG12864_Init(void)
     /// Функция инициализации дисплея
     cs_set();
     RST_set();
-    HAL_Delay(10);
+    DELAY_MS(10);
     RST_reset();
-    HAL_Delay(10);
+    DELAY_MS(10);
+    cs_reset();
     // Установите рабочий цикл ( 1/7 или 1/9 ) в зависимости от физического ЖК-дисплея
     GMG12864_Send_command(0xA2);
-    HAL_Delay(1);
+
     // Установите горизонтальную и вертикальную ориентацию в известное состояние
     GMG12864_Send_command(0xA0); // ADC selection(SEG0->SEG128)
     GMG12864_Send_command(0xC8); // SHL selection(COM0->COM64)
-    HAL_Delay(1);
+
     // делитель внутреннего резистора установлен на 7 (от 0..7)
     GMG12864_Send_command(0x20 | 0x7); // Regulator Resistor Selection
-    HAL_Delay(1);
+
     // управление питанием, все внутренние блоки включены	(от 0..7)
     GMG12864_Send_command(0x28 | 0x7);
-    HAL_Delay(1);
+
     // войти в режим динамического контраста
     GMG12864_Send_command(0x81); // Electronic Volume
     GMG12864_Send_command(18); // Настройка контраста. Отрегулируйте на своем дисплее. У
                                // меня на 15-19 норм. Максимум 63.
-    HAL_Delay(1);
+
     GMG12864_Send_command(0x40);
-    HAL_Delay(1);
+
     // CMD_DISPLAY_ON  CMD_DISPLAY_OFF
     GMG12864_Send_command(0xAF); // Display on
     // Инвертирование экрана
     GMG12864_Send_command(0xA6); // 0xA6 - nomal, 0xA7 - revers
-    HAL_Delay(1);
-    cs_reset();
 }
 /*-------------------------Функция инициализации дисплея--------------------------*/
 
@@ -568,13 +568,13 @@ void GMG12864_DrawBitmap(const uint8_t *bitmap, int8_t x, int8_t y, int8_t w, in
 void GMG12864_Draw_pixel(int16_t x, int16_t y, uint8_t color)
 {
 
-    if (x >= GMG12864_width || x < 0 || y >= GMG12864_height || y < 0)
+    if (x >= (int16_t)DISP_WIDTH || x < 0 || y >= (int16_t)DISP_HEIGHT || y < 0)
     {
         return;
     }
     else
     {
-        uint16_t array_pos = x + ((y / 8) * GMG12864_width);
+        uint16_t array_pos = x + ((y / 8) * DISP_WIDTH);
 
         if (color)
         {
@@ -591,17 +591,12 @@ void GMG12864_Draw_pixel(int16_t x, int16_t y, uint8_t color)
 /*---------------------Функция вывода буфера кадра на дисплей------------------------*/
 void GMG12864_Update(void)
 {
-    cs_set();
     for (uint8_t y = 0; y < 8; y++)
     {
         ST7565_SetX(0);
         ST7565_SetY((int16_t)y);
-        for (uint8_t x = 0; x < 128; x++)
-        {
-            GMG12864_Send_data(Frame_buffer[x + 128 * y]);
-        }
+        GMG12864_Send_data(&Frame_buffer[128 * y], 128);
     }
-    cs_reset();
 }
 /*---------------------Функция вывода буфера кадра на дисплей------------------------*/
 
@@ -1281,13 +1276,13 @@ void GMG12864_Draw_rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t he
     /// \param height - высота прямоугольника
 
     /*Проверка ширины и высоты*/
-    if ((x + width) >= GMG12864_width)
+    if ((x + width) >= DISP_WIDTH)
     {
-        width = GMG12864_width - x;
+        width = DISP_WIDTH - x;
     }
-    if ((y + height) >= GMG12864_height)
+    if ((y + height) >= DISP_HEIGHT)
     {
-        height = GMG12864_height - y;
+        height = DISP_HEIGHT - y;
     }
 
     /*Рисуем линии*/
@@ -1313,13 +1308,13 @@ void GMG12864_Draw_rectangle_filled(uint16_t x, uint16_t y, uint16_t width,
     /// \param height - высота прямоугольника
 
     /*Проверка ширины и высоты*/
-    if ((x + width) >= GMG12864_width)
+    if ((x + width) >= DISP_WIDTH)
     {
-        width = GMG12864_width - x;
+        width = DISP_WIDTH - x;
     }
-    if ((y + height) >= GMG12864_height)
+    if ((y + height) >= DISP_HEIGHT)
     {
-        height = GMG12864_height - y;
+        height = DISP_HEIGHT - y;
     }
 
     /*Рисуем линии*/
