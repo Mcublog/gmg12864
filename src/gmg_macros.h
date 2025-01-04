@@ -14,14 +14,14 @@ extern "C" {
 #define ST7565_SetX(x)                                                                   \
     do                                                                                   \
     {                                                                                    \
-        GMG12864_Send_command(((x) & 0xf0) >> 4 | 0x10);                                 \
-        GMG12864_Send_command((x) & 0x0f);                                               \
+        send_command(((x) & 0xf0) >> 4 | 0x10);                                 \
+        send_command((x) & 0x0f);                                               \
     } while (0)
 
 #define ST7565_SetY(y)                                                                   \
     do                                                                                   \
     {                                                                                    \
-        GMG12864_Send_command(((y) & 0x07) | 0xB0);                                      \
+        send_command(((y) & 0x07) | 0xB0);                                      \
     } while (0)
 
 #ifdef __cplusplus

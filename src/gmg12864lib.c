@@ -39,6 +39,34 @@ static bool array_is_full = 0; // значения заполнили масси
 
 /*-----------------------------------Настройки----------------------------------*/
 
+/*----------------------Функция отправки команды на дисплей------------------------*/
+static void send_command(uint8_t Command)
+{
+    /// Функция отправки команды на дисплей
+    /// \param Command - 8 бит данных.
+    DC_set();
+    cs_set();
+    HAL_SPI_Transmit(&SPI_HANDLE, &Command, 1, HAL_MAX_DELAY);
+    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
+        ;
+    cs_reset();
+    DC_reset();
+}
+/*----------------------Функция отправки команды на дисплей------------------------*/
+
+/*----------------------Функция отправки данных на дисплей------------------------*/
+static void send_data(uint8_t *data, uint16_t size)
+{
+    DC_reset();
+    cs_set();
+    HAL_SPI_Transmit(&SPI_HANDLE, data, size, HAL_MAX_DELAY);
+    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
+        ;
+    cs_reset();
+    DC_set();
+}
+/*----------------------Функция отправки данных на дисплей------------------------*/
+
 /*------------------------------Добавить в main.c-------------------------------*/
 // extern char tx_buffer[128]; //Буфер для отправки текста на дисплей
 // extern uint8_t Frame_buffer[1024]; //Буфер кадра
@@ -457,34 +485,6 @@ void GMG12864_logo_demonstration(void)
 /*---------------Вывод стартового демонстрационного лого------------------------*/
 /*================= Демонстрационное лого. Можно вырезать. =====================*/
 
-/*----------------------Функция отправки команды на дисплей------------------------*/
-static void GMG12864_Send_command(uint8_t Command)
-{
-    /// Функция отправки команды на дисплей
-    /// \param Command - 8 бит данных.
-    DC_set();
-    cs_set();
-    HAL_SPI_Transmit(&SPI_HANDLE, &Command, 1, HAL_MAX_DELAY);
-    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
-        ;
-    cs_reset();
-    DC_reset();
-}
-/*----------------------Функция отправки команды на дисплей------------------------*/
-
-/*----------------------Функция отправки данных на дисплей------------------------*/
-static void GMG12864_Send_data(uint8_t *data, uint16_t size)
-{
-    DC_reset();
-    cs_set();
-    HAL_SPI_Transmit(&SPI_HANDLE, data, size, HAL_MAX_DELAY);
-    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
-        ;
-    cs_reset();
-    DC_set();
-}
-/*----------------------Функция отправки данных на дисплей------------------------*/
-
 /*------------------------Функция очистки буфера кадра-------------------------*/
 void GMG12864_Clean_Frame_buffer(void)
 {
@@ -504,29 +504,29 @@ void GMG12864_Init(void)
     DELAY_MS(10);
     cs_reset();
     // Установите рабочий цикл ( 1/7 или 1/9 ) в зависимости от физического ЖК-дисплея
-    GMG12864_Send_command(0xA2);
+    send_command(0xA2);
 
     // Установите горизонтальную и вертикальную ориентацию в известное состояние
-    GMG12864_Send_command(0xA0); // ADC selection(SEG0->SEG128)
-    GMG12864_Send_command(0xC8); // SHL selection(COM0->COM64)
+    send_command(0xA0); // ADC selection(SEG0->SEG128)
+    send_command(0xC8); // SHL selection(COM0->COM64)
 
     // делитель внутреннего резистора установлен на 7 (от 0..7)
-    GMG12864_Send_command(0x20 | 0x7); // Regulator Resistor Selection
+    send_command(0x20 | 0x7); // Regulator Resistor Selection
 
     // управление питанием, все внутренние блоки включены	(от 0..7)
-    GMG12864_Send_command(0x28 | 0x7);
+    send_command(0x28 | 0x7);
 
     // войти в режим динамического контраста
-    GMG12864_Send_command(0x81); // Electronic Volume
-    GMG12864_Send_command(18); // Настройка контраста. Отрегулируйте на своем дисплее. У
+    send_command(0x81); // Electronic Volume
+    send_command(7); // Настройка контраста. Отрегулируйте на своем дисплее. У
                                // меня на 15-19 норм. Максимум 63.
 
-    GMG12864_Send_command(0x40);
+    send_command(0x40);
 
     // CMD_DISPLAY_ON  CMD_DISPLAY_OFF
-    GMG12864_Send_command(0xAF); // Display on
+    send_command(0xAF); // Display on
     // Инвертирование экрана
-    GMG12864_Send_command(0xA6); // 0xA6 - nomal, 0xA7 - revers
+    send_command(0xA6); // 0xA6 - nomal, 0xA7 - revers
 }
 /*-------------------------Функция инициализации дисплея--------------------------*/
 
@@ -595,7 +595,7 @@ void GMG12864_Update(void)
     {
         ST7565_SetX(0);
         ST7565_SetY((int16_t)y);
-        GMG12864_Send_data(&Frame_buffer[128 * y], 128);
+        send_data(&Frame_buffer[128 * y], 128);
     }
 }
 /*---------------------Функция вывода буфера кадра на дисплей------------------------*/
@@ -614,25 +614,13 @@ void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
             { // от 0 до 6, т.к. шрифт высотой 7 пикселей
                 if (0x00 & (1 << i))
                 {
-                    if (inversion)
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 0); // Закрасить пиксель
-                    }
-                    else
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 1); // Закрасить пиксель
-                    }
+                    uint8_t color = inversion ? 0 : 1;
+                    GMG12864_Draw_pixel(x, y + i, color);
                 }
                 else
                 {
-                    if (inversion)
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 1); // Очистить пиксель
-                    }
-                    else
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 0); // Очистить пиксель
-                    }
+                    uint8_t color = inversion ? 1 : 0;
+                    GMG12864_Draw_pixel(x, y + i, color);
                 }
             }
         }
@@ -642,25 +630,13 @@ void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
             { // от 0 до 6, т.к. шрифт высотой 7 пикселей
                 if (Font_5x7[(symbol * 5) + x - x_start] & (1 << i))
                 {
-                    if (inversion)
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 0); // Закрасить пиксель
-                    }
-                    else
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 1); // Закрасить пиксель
-                    }
+                    uint8_t color = inversion ? 0 : 1;
+                    GMG12864_Draw_pixel(x, y + i, color);
                 }
                 else
                 {
-                    if (inversion)
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 1); // Очистить пиксель
-                    }
-                    else
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 0); // Очистить пиксель
-                    }
+                    uint8_t color = inversion ? 1 : 0;
+                    GMG12864_Draw_pixel(x, y + i, color);
                 }
             }
         }
@@ -682,25 +658,13 @@ void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
             { // от 0 до 6, т.к. шрифт высотой 7 пикселей
                 if (0x00 & (1 << i))
                 {
-                    if (inversion)
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 0); // Закрасить пиксель
-                    }
-                    else
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 1); // Закрасить пиксель
-                    }
+                    uint8_t color = inversion ? 0 : 1;
+                    GMG12864_Draw_pixel(x, y + i, color);
                 }
                 else
                 {
-                    if (inversion)
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 1); // Очистить пиксель
-                    }
-                    else
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 0); // Очистить пиксель
-                    }
+                    uint8_t color = inversion ? 1 : 0;
+                    GMG12864_Draw_pixel(x, y + i, color);
                 }
             }
         }
@@ -710,25 +674,13 @@ void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
             { // от 0 до 6, т.к. шрифт высотой 7 пикселей
                 if (Font_3x5[(symbol * 3) + x - x_start] & (1 << i))
                 {
-                    if (inversion)
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 0); // Закрасить пиксель
-                    }
-                    else
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 1); // Закрасить пиксель
-                    }
+                    uint8_t color = inversion ? 0 : 1;
+                    GMG12864_Draw_pixel(x, y + i, color);
                 }
                 else
                 {
-                    if (inversion)
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 1); // Очистить пиксель
-                    }
-                    else
-                    {
-                        GMG12864_Draw_pixel(x, y + i, 0); // Очистить пиксель
-                    }
+                    uint8_t color = inversion ? 1 : 0;
+                    GMG12864_Draw_pixel(x, y + i, color);
                 }
             }
         }
@@ -737,15 +689,21 @@ void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
 /*---------------------Функция вывода символа на дисплей-----------------------------*/
 
 /*----------------Функция декодирования UTF-8 в набор символов-----------------*/
+/**
+ * @brief Функция декодирования UTF-8 в набор символов и последующее занесение в буфер кадра
+ *
+ * @param x - координата по х. От 0 до 127
+ * @param y - координата по y. от 0 до 7
+ * @param font - шрифт. 0 - 3x5, 1 - 5x7
+ * @param inversion
+ * @param tx_buffer
+ */
 void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
-                          char *tx_buffer)
+                          const char *tx_buffer)
 {
-    /// Функция декодирования UTF-8 в набор символов и последующее занесение в буфер кадра
-    /// \param x - координата по х. От 0 до 127
-    /// \param y - координата по y. от 0 до 7
-    /// \param font - шрифт. 0 - 3x5, 1 - 5x7
     uint16_t symbol = 0;
     bool flag_block = 0;
+    uint8_t color = inversion ? 1 : 0;
     for (size_t i = 0; i < strlen(tx_buffer); i++)
     {
         if (tx_buffer[i] < 0xC0)
@@ -759,35 +717,17 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
             {
                 symbol = tx_buffer[i];
                 if (font == font3x5)
-                { // Если выбран шрифт размера 3x5
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_3x5(x, y, symbol - 32,
-                                                  1); // Таблица UTF-8. Basic Latin. С
-                                                      // "пробел" до "z". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_3x5(x, y, symbol - 32,
-                                                  0); // Таблица UTF-8. Basic Latin. С
-                                                      // "пробел" до "z". Инверсия выкл.
-                    }
+                {
+                    // Таблица UTF-8. Basic Latin. С
+                    // "пробел" до "z". Инверсия вкл.
+                    GMG12864_Print_symbol_3x5(x, y, symbol - 32, color);
                     x = x + 4;
                 }
                 else if (font == font5x7)
-                { // Если выбран шрифт размера 5x7
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_5x7(x, y, symbol - 32,
-                                                  1); // Таблица UTF-8. Basic Latin. С
-                                                      // "пробел" до "z". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_5x7(x, y, symbol - 32,
-                                                  0); // Таблица UTF-8. Basic Latin. С
-                                                      // "пробел" до "z". Инверсия выкл.
-                    }
+                {
+                    // Таблица UTF-8. Basic Latin. С
+                    // "пробел" до "z". Инверсия вкл.
+                    GMG12864_Print_symbol_5x7(x, y, symbol - 32, color);
                     x = x + 6;
                 }
             }
@@ -799,140 +739,62 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
             if (symbol < 0xD180 && symbol > 0xD081)
             {
                 if (font == font3x5)
-                { // Если выбран шрифт размера 3x5
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_3x5(x, y, symbol - 53297,
-                                                  1); // Таблица UTF-8. Кириллица. С буквы
-                                                      // "А" до "п". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_3x5(x, y, symbol - 53297,
-                                                  0); // Таблица UTF-8. Кириллица. С буквы
-                                                      // "А" до "п". Инверсия выкл.
-                    }
+                {
+                    // Таблица UTF-8. Кириллица. С буквы
+                    // "А" до "п". Инверсия вкл.
+                    GMG12864_Print_symbol_3x5(x, y, symbol - 53297, color);
                     x = x + 4;
                 }
                 else if (font == font5x7)
-                { // Если выбран шрифт размера 5x7
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_5x7(x, y, symbol - 53297,
-                                                  1); // Таблица UTF-8. Кириллица. С буквы
-                                                      // "А" до "п". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_5x7(x, y, symbol - 53297,
-                                                  0); // Таблица UTF-8. Кириллица. С буквы
-                                                      // "А" до "п". Инверсия выкл.
-                    }
+                {
+                    // Таблица UTF-8. Кириллица. С буквы
+                    // "А" до "п". Инверсия вкл.
+                    GMG12864_Print_symbol_5x7(x, y, symbol - 53297, color);
                     x = x + 6;
                 }
             }
             else if (symbol == 0xD081)
             {
                 if (font == font3x5)
-                { // Если выбран шрифт размера 3x5
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_3x5(
-                            x, y, 159,
-                            1); ////Таблица UTF-8. Кириллица. Буква "Ё". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_3x5(
-                            x, y, 159,
-                            0); ////Таблица UTF-8. Кириллица. Буква "Ё". Инверсия выкл.
-                    }
+                {
+                    //Таблица UTF-8. Кириллица. Буква "Ё". Инверсия вкл.
+                    GMG12864_Print_symbol_3x5(x, y, 159, color);
                     x = x + 4;
                 }
                 else if (font == font5x7)
-                { // Если выбран шрифт размера 5x7
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_5x7(
-                            x, y, 159,
-                            1); ////Таблица UTF-8. Кириллица. Буква "Ё". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_5x7(
-                            x, y, 159,
-                            0); ////Таблица UTF-8. Кириллица. Буква "Ё". Инверсия выкл.
-                    }
+                {
+                    //Таблица UTF-8. Кириллица. Буква "Ё". Инверсия вкл.
+                    GMG12864_Print_symbol_5x7(x, y, 159, color);
                     x = x + 6;
                 }
             }
             else if (symbol == 0xD191)
             {
                 if (font == font3x5)
-                { // Если выбран шрифт размера 3x5
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_3x5(
-                            x, y, 160,
-                            1); ////Таблица UTF-8. Кириллица. Буква "ё". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_3x5(
-                            x, y, 160,
-                            0); ////Таблица UTF-8. Кириллица. Буква "ё". Инверсия выкл.
-                    }
+                {
+                    //Таблица UTF-8. Кириллица. Буква "ё". Инверсия вкл.
+                    GMG12864_Print_symbol_3x5(x, y, 160, color);
                     x = x + 4;
                 }
                 else if (font == font5x7)
-                { // Если выбран шрифт размера 5x7
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_5x7(
-                            x, y, 160,
-                            1); ////Таблица UTF-8. Кириллица. Буква "ё". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_5x7(
-                            x, y, 160,
-                            0); ////Таблица UTF-8. Кириллица. Буква "ё". Инверсия выкл.
-                    }
+                {
+                    //Таблица UTF-8. Кириллица. Буква "ё". Инверсия вкл.
+                    GMG12864_Print_symbol_5x7(x, y, 160, color);
                     x = x + 6;
                 }
             }
             else if (symbol == 0xC2B0)
             {
                 if (font == font3x5)
-                { // Если выбран шрифт размера 3x5
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_3x5(
-                            x, y, 161,
-                            1); ////Таблица UTF-8. Basic Latin. Символ "°". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_3x5(
-                            x, y, 161,
-                            0); ////Таблица UTF-8. Basic Latin. Символ "°". Инверсия выкл.
-                    }
+                {
+                    //Таблица UTF-8. Basic Latin. Символ "°". Инверсия вкл.
+                    GMG12864_Print_symbol_3x5(x, y, 161, color);
                     x = x + 4;
                 }
                 else if (font == font5x7)
-                { // Если выбран шрифт размера 5x7
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_5x7(
-                            x, y, 161,
-                            1); ////Таблица UTF-8. Basic Latin. Символ "°". Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_5x7(
-                            x, y, 161,
-                            0); ////Таблица UTF-8. Basic Latin. Символ "°". Инверсия выкл.
-                    }
+                {
+                    //Таблица UTF-8. Basic Latin. Символ "°". Инверсия вкл.
+                    GMG12864_Print_symbol_5x7(x, y, 161, color);
                     x = x + 6;
                 }
             }
@@ -940,39 +802,17 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
             else
             {
                 if (font == font3x5)
-                { // Если выбран шрифт размера 3x5
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_3x5(
-                            x, y, symbol - 53489,
-                            1); // Таблица UTF-8. Кириллица. С буквы "р", начинается
-                                // сдвиг. Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_3x5(
-                            x, y, symbol - 53489,
-                            0); // Таблица UTF-8. Кириллица. С буквы "р", начинается
-                                // сдвиг. Инверсия выкл.
-                    }
+                {
+                    // Таблица UTF-8. Кириллица. С буквы "р", начинается
+                    // сдвиг. Инверсия вкл.
+                    GMG12864_Print_symbol_3x5(x, y, symbol - 53489, color);
                     x = x + 4;
                 }
                 else if (font == font5x7)
-                { // Если выбран шрифт размера 5x7
-                    if (inversion)
-                    {
-                        GMG12864_Print_symbol_5x7(
-                            x, y, symbol - 53489,
-                            1); // Таблица UTF-8. Кириллица. С буквы "р", начинается
-                                // сдвиг. Инверсия вкл.
-                    }
-                    else
-                    {
-                        GMG12864_Print_symbol_5x7(
-                            x, y, symbol - 53489,
-                            0); // Таблица UTF-8. Кириллица. С буквы "р", начинается
-                                // сдвиг. Инверсия выкл.
-                    }
+                {
+                    // Таблица UTF-8. Кириллица. С буквы "р", начинается
+                    // сдвиг. Инверсия вкл.
+                    GMG12864_Print_symbol_5x7(x, y, symbol - 53489, color);
                     x = x + 6;
                 }
             }

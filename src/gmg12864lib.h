@@ -49,7 +49,7 @@ extern "C"
     void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol,
                                    uint8_t inversion);
     void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
-                              char *tx_buffer);
+                              const char *tx_buffer);
     void GMG12864_Inversion(uint16_t x_start, uint16_t x_end);
     uint8_t GMG12864_Value_for_Plot(int y_min, int y_max, float value);
     void GMG12864_Fill_the_array_Plot(uint8_t *counter, uint8_t *array,
