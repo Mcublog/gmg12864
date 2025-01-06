@@ -22,15 +22,16 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "gmg12864lib.h"
 #include "gmg_macros.h"
 #include "gmg12864_config.h"
 /*-----------------------------------Настройки----------------------------------*/
-#define DISP_WIDTH          (128U) // Ширина дисплея в пикселях
-#define DISP_HEIGHT         (64U) // Высота дисплея в пикселях
-#define DISP_HEIGHT_BYTES   (DISP_HEIGHT / 8U) // Высота дисплея в байтах
-#define ARRAY_SIZE          (100U)
+#define DISP_WIDTH              (128U) // Ширина дисплея в пикселях
+#define DISP_HEIGHT             (64U) // Высота дисплея в пикселях
+#define DISP_HEIGHT_BYTES       (DISP_HEIGHT / 8U) // Высота дисплея в байтах
+#define SPRINTF_BUFFER_SIZE     (32U)
 
 static char tx_buffer[DISP_WIDTH] = {0}; // Буфер для отправки текста на дисплей
 static uint8_t Frame_buffer[DISP_HEIGHT_BYTES * DISP_WIDTH] = {0}; // Буфер кадра
@@ -1359,6 +1360,44 @@ void GMG12864_Draw_triangle_filled(uint16_t x1, uint16_t y1, uint16_t x2, uint16
         x += xinc2;
         y += yinc2;
     }
+}
+
+/**
+ * @brief
+ *
+ * @param px
+ * @param py
+ * @param fmt
+ * @param ...
+ * @return int
+ */
+int GMG12864_Sprintf(uint8_t px, uint8_t py, const char *fmt, ...)
+{
+    uint8_t buffer[SPRINTF_BUFFER_SIZE + 1];
+    va_list plist;
+
+    va_start(plist, fmt);
+    int res = vsniprintf((char*)buffer, SPRINTF_BUFFER_SIZE, fmt, plist);
+    va_end(plist);
+
+    GMG12864_Decode_UTF8(px, py, 1, 0, (const char*)buffer);
+    return res;
+}
+
+/**
+ * @brief
+ *
+ * @param px
+ * @param py
+ * @param text
+ * @return int
+ */
+int GMG12864_Puts(uint8_t px, uint8_t py, const char *text)
+{
+    uint8_t buffer[SPRINTF_BUFFER_SIZE + 1];
+    int res = snprintf((char*)buffer, SPRINTF_BUFFER_SIZE, text);
+    GMG12864_Decode_UTF8(px, py, 1, 0, (const char*)buffer);
+    return res;
 }
 /*----------------------------------Вывести закрашенный
  * треугольник--------------------------------*/

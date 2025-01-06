@@ -70,6 +70,9 @@ extern "C"
     void GMG12864_Draw_triangle_filled(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,
                                        uint16_t x3, uint16_t y3, uint8_t color);
 
+    int GMG12864_Sprintf(uint8_t px, uint8_t py, const char *fmt, ...);
+    int GMG12864_Puts(uint8_t px, uint8_t py, const char *text);
+
 #ifdef __cplusplus
 }
 #endif
