@@ -27,12 +27,13 @@
 #include "gmg_macros.h"
 #include "gmg12864_config.h"
 /*-----------------------------------Настройки----------------------------------*/
-#define DISP_WIDTH (128U) // Ширина дисплея в пикселях
-#define DISP_HEIGHT (64U) // Высота дисплея в пикселях
-#define ARRAY_SIZE (100U)
+#define DISP_WIDTH          (128U) // Ширина дисплея в пикселях
+#define DISP_HEIGHT         (64U) // Высота дисплея в пикселях
+#define DISP_HEIGHT_BYTES   (DISP_HEIGHT / 8U) // Высота дисплея в байтах
+#define ARRAY_SIZE          (100U)
 
 static char tx_buffer[DISP_WIDTH] = {0}; // Буфер для отправки текста на дисплей
-static uint8_t Frame_buffer[1024] = {0}; // Буфер кадра
+static uint8_t Frame_buffer[DISP_HEIGHT_BYTES * DISP_WIDTH] = {0}; // Буфер кадра
 
 // Для работы отрисовки графика:
 static bool array_is_full = 0; // значения заполнили массив, можно сдвигать график влево
@@ -554,10 +555,7 @@ void GMG12864_DrawBitmap(const uint8_t *bitmap, int8_t x, int8_t y, int8_t w, in
                 byte = (*(const unsigned char *)(&bitmap[j * byteWidth + i / 8]));
             }
 
-            if (byte & 0x80)
-            {
-                GMG12864_Draw_pixel(x + i, y, 1);
-            }
+            GMG12864_Draw_pixel(x + i, y, byte & 0x80);
         }
     }
 }
@@ -591,11 +589,11 @@ void GMG12864_Draw_pixel(int16_t x, int16_t y, uint8_t color)
 /*---------------------Функция вывода буфера кадра на дисплей------------------------*/
 void GMG12864_Update(void)
 {
-    for (uint8_t y = 0; y < 8; y++)
+    for (int16_t y = 0; y < 8; ++y)
     {
         ST7565_SetX(0);
-        ST7565_SetY((int16_t)y);
-        send_data(&Frame_buffer[128 * y], 128);
+        ST7565_SetY(y);
+        send_data(&Frame_buffer[DISP_WIDTH * y], DISP_WIDTH);
     }
 }
 /*---------------------Функция вывода буфера кадра на дисплей------------------------*/
@@ -918,8 +916,8 @@ void GMG12864_Fill_the_array_Plot(uint8_t *counter, uint8_t *array, uint8_t size
     (*counter)++;
     if (*counter == 250)
     {
-        *counter = 128; // Защита от переполнения, иначе график будет сбрасываться(главное
-                        // чтоб разница была равна или больше кол-ву выводимых точек)
+        *counter = DISP_WIDTH;  // Защита от переполнения, иначе график будет сбрасываться(главное
+                                // чтобы разница была равна или больше кол-ву выводимых точек)
     }
 }
 /*-------------------Работа с массивом данных---------------------*/
