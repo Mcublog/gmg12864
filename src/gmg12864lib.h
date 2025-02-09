@@ -73,6 +73,8 @@ extern "C"
     int GMG12864_Sprintf(uint8_t px, uint8_t py, const char *fmt, ...);
     int GMG12864_Puts(uint8_t px, uint8_t py, const char *text);
 
+    void GMG12864_Set_contrast(uint8_t contrast);
+
 #ifdef __cplusplus
 }
 #endif
