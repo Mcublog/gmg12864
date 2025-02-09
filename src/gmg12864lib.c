@@ -519,9 +519,7 @@ void GMG12864_Init(void)
     send_command(0x28 | 0x7);
 
     // войти в режим динамического контраста
-    send_command(0x81); // Electronic Volume
-    send_command(7); // Настройка контраста. Отрегулируйте на своем дисплее. У
-                               // меня на 15-19 норм. Максимум 63.
+    GMG12864_Set_contrast(7);
 
     send_command(0x40);
 
@@ -1399,8 +1397,16 @@ int GMG12864_Puts(uint8_t px, uint8_t py, const char *text)
     GMG12864_Decode_UTF8(px, py, 1, 0, (const char*)buffer);
     return res;
 }
-/*----------------------------------Вывести закрашенный
- * треугольник--------------------------------*/
 
-/********************************РАБОТА С ГЕОМЕТРИЧЕСКИМИ
- * ФИГУРАМИ**********************************/
+/**
+ * @brief Настройка контраста. Отрегулируйте на своем дисплее.
+ * У меня на 15-19 норм. Максимум 63
+ *
+ * @param contrast
+ */
+void GMG12864_Set_contrast(uint8_t contrast)
+{
+    // войти в режим динамического контраста
+    send_command(0x81); // Electronic Volume
+    send_command(contrast);
+}
