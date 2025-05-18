@@ -31,7 +31,7 @@
 #define DISP_WIDTH              (128U) // Ширина дисплея в пикселях
 #define DISP_HEIGHT             (64U) // Высота дисплея в пикселях
 #define DISP_HEIGHT_BYTES       (DISP_HEIGHT / 8U) // Высота дисплея в байтах
-#define SPRINTF_BUFFER_SIZE     (32U)
+#define SPRINTF_BUFFER_SIZE     (64U)
 
 static char tx_buffer[DISP_WIDTH] = {0}; // Буфер для отправки текста на дисплей
 static uint8_t Frame_buffer[DISP_HEIGHT_BYTES * DISP_WIDTH] = {0}; // Буфер кадра
