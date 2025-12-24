@@ -509,7 +509,11 @@ void GMG12864_Init(void)
     send_command(0xA2);
 
     // Установите горизонтальную и вертикальную ориентацию в известное состояние
-    send_command(0xA0); // ADC selection(SEG0->SEG128)
+#ifdef GMG12864_OLED
+    send_command(0xA1); // ADC selection(SEG0->SEG128)
+#else
+    send_command(0xA0);
+#endif
     send_command(0xC8); // SHL selection(COM0->COM64)
 
     // делитель внутреннего резистора установлен на 7 (от 0..7)
@@ -588,9 +592,14 @@ void GMG12864_Draw_pixel(int16_t x, int16_t y, uint8_t color)
 /*---------------------Функция вывода буфера кадра на дисплей------------------------*/
 void GMG12864_Update(void)
 {
+#ifdef GMG12864_OLED
+    static const uint16_t kX = 2;
+#else
+    static const uint16_t kX = 0;
+#endif
     for (int16_t y = 0; y < 8; ++y)
     {
-        ST7565_SetX(0);
+        ST7565_SetX(kX);
         ST7565_SetY(y);
         send_data(&Frame_buffer[DISP_WIDTH * y], DISP_WIDTH);
     }
