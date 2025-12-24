@@ -14,4 +14,6 @@
 #define SPI_HANDLE (hspi2)
 extern SPI_HandleTypeDef SPI_HANDLE; //Используемая шина spi
 
+// #define GMG12864_OLED // десплей с контроллером GMG12864, но сама матрица OLED
+
 #endif // GMG12864_CONFIG_TEMPLATE_H
