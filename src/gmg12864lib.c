@@ -44,14 +44,14 @@ static const gmg_dev_t *m_dev = NULL;
 /*-----------------------------------Настройки----------------------------------*/
 
 /*----------------------Функция отправки команды на дисплей------------------------*/
-static void send_command(uint8_t Command)
+static inline void send_command(uint8_t Command)
 {
     m_dev->send_command(Command);
 }
 /*----------------------Функция отправки команды на дисплей------------------------*/
 
 /*----------------------Функция отправки данных на дисплей------------------------*/
-static void send_data(uint8_t *data, uint16_t size)
+static inline void send_data(uint8_t *data, uint16_t size)
 {
     m_dev->send_data(data, size);
 }
