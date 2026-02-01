@@ -25,6 +25,8 @@
 #include <stdarg.h>
 
 #include "gmg12864lib.h"
+
+#include "gmg_types.h"
 #include "gmg_macros.h"
 #include "gmg12864_config.h"
 /*-----------------------------------Настройки----------------------------------*/
@@ -39,33 +41,20 @@ static uint8_t Frame_buffer[DISP_HEIGHT_BYTES * DISP_WIDTH] = {0}; // Буфер
 // Для работы отрисовки графика:
 static bool array_is_full = 0; // значения заполнили массив, можно сдвигать график влево
 
+static const gmg_dev_t *m_dev = NULL;
 /*-----------------------------------Настройки----------------------------------*/
 
 /*----------------------Функция отправки команды на дисплей------------------------*/
 static void send_command(uint8_t Command)
 {
-    /// Функция отправки команды на дисплей
-    /// \param Command - 8 бит данных.
-    DC_set();
-    cs_set();
-    HAL_SPI_Transmit(&SPI_HANDLE, &Command, 1, HAL_MAX_DELAY);
-    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
-        ;
-    cs_reset();
-    DC_reset();
+    m_dev->send_command(Command);
 }
 /*----------------------Функция отправки команды на дисплей------------------------*/
 
 /*----------------------Функция отправки данных на дисплей------------------------*/
 static void send_data(uint8_t *data, uint16_t size)
 {
-    DC_reset();
-    cs_set();
-    HAL_SPI_Transmit(&SPI_HANDLE, data, size, HAL_MAX_DELAY);
-    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
-        ;
-    cs_reset();
-    DC_set();
+    m_dev->send_data(data, size);
 }
 /*----------------------Функция отправки данных на дисплей------------------------*/
 
@@ -496,41 +485,10 @@ void GMG12864_Clean_Frame_buffer(void)
 /*------------------------Функция очистки буфера кадра-------------------------*/
 
 /*-------------------------Функция инициализации дисплея--------------------------*/
-void GMG12864_Init(void)
+void GMG12864_Init(const gmg_dev_t *gmgdev)
 {
-    /// Функция инициализации дисплея
-    cs_set();
-    RST_set();
-    DELAY_MS(10);
-    RST_reset();
-    DELAY_MS(10);
-    cs_reset();
-    // Установите рабочий цикл ( 1/7 или 1/9 ) в зависимости от физического ЖК-дисплея
-    send_command(0xA2);
-
-    // Установите горизонтальную и вертикальную ориентацию в известное состояние
-#ifdef GMG12864_OLED
-    send_command(0xA1); // ADC selection(SEG0->SEG128)
-#else
-    send_command(0xA0);
-#endif
-    send_command(0xC8); // SHL selection(COM0->COM64)
-
-    // делитель внутреннего резистора установлен на 7 (от 0..7)
-    send_command(0x20 | 0x7); // Regulator Resistor Selection
-
-    // управление питанием, все внутренние блоки включены	(от 0..7)
-    send_command(0x28 | 0x7);
-
-    // войти в режим динамического контраста
-    GMG12864_Set_contrast(7);
-
-    send_command(0x40);
-
-    // CMD_DISPLAY_ON  CMD_DISPLAY_OFF
-    send_command(0xAF); // Display on
-    // Инвертирование экрана
-    send_command(0xA6); // 0xA6 - nomal, 0xA7 - revers
+    m_dev = gmgdev;
+    m_dev->init();
 }
 /*-------------------------Функция инициализации дисплея--------------------------*/
 
@@ -1415,7 +1373,5 @@ int GMG12864_Puts(uint8_t px, uint8_t py, const char *text)
  */
 void GMG12864_Set_contrast(uint8_t contrast)
 {
-    // войти в режим динамического контраста
-    send_command(0x81); // Electronic Volume
-    send_command(contrast);
+    m_dev->set_contrast(contrast);
 }

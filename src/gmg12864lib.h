@@ -29,6 +29,9 @@
 #define inversion_off (0)
 #define inversion_on (1)
 
+typedef struct gmg_dev_t gmg_dev_t;
+
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -38,7 +41,7 @@ extern "C"
     void GMG12864_logo_demonstration(void);
     /*================= Демонстрационное лого. Можно вырезать. =====================*/
 
-    void GMG12864_Init(void);
+    void GMG12864_Init(const gmg_dev_t *gmgdev);
     void GMG12864_Clean_Frame_buffer(void);
     void GMG12864_Update(void);
     void GMG12864_DrawBitmap(const uint8_t *bitmap, int8_t x, int8_t y, int8_t w,
