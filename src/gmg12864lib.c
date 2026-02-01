@@ -28,7 +28,6 @@
 
 #include "gmg_types.h"
 #include "gmg_macros.h"
-#include "gmg12864_config.h"
 /*-----------------------------------Настройки----------------------------------*/
 #define DISP_WIDTH              (128U) // Ширина дисплея в пикселях
 #define DISP_HEIGHT             (64U) // Высота дисплея в пикселях
@@ -452,16 +451,16 @@ void GMG12864_logo_demonstration(void)
     GMG12864_Decode_UTF8(16, 40, 1, 0, tx_buffer);
     sprintf(tx_buffer, "electronics lab.");
     GMG12864_Decode_UTF8(18, 48, 1, 0, tx_buffer);
-    DELAY_MS(500);
+    m_dev->delay_ms(500);
     GMG12864_Update();
-    DELAY_MS(3000);
+    m_dev->delay_ms(3000);
     sprintf(tx_buffer, "                ");
     GMG12864_Decode_UTF8(18, 48, 1, 0, tx_buffer);
-    DELAY_MS(500);
+    m_dev->delay_ms(500);
     GMG12864_Update();
     sprintf(tx_buffer, "                ");
     GMG12864_Decode_UTF8(16, 40, 1, 0, tx_buffer);
-    DELAY_MS(500);
+    m_dev->delay_ms(500);
     GMG12864_Update();
 
     for (int i = 0; i < 369; i++)
@@ -469,7 +468,7 @@ void GMG12864_logo_demonstration(void)
         Frame_buffer[i + 265] = 0x00;
     }
     GMG12864_Update();
-    DELAY_MS(500);
+    m_dev->delay_ms(500);
     GMG12864_Clean_Frame_buffer();
     GMG12864_Update();
 }
