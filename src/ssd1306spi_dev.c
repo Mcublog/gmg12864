@@ -1,5 +1,5 @@
 /**
- * @file ssd1306dev.c
+ * @file ssd1306spi_dev.c
  * @author Viacheslav (viacheslav@mcublog.ru)
  * @brief Аппаратно зависамая часть работы с контректным контроллером дисплея
  * @version 0.1
@@ -10,11 +10,11 @@
  */
 #include <stdint.h>
 
-#include "ssd1306dev.h"
+#include "ssd1306spi_dev.h"
 
 #include "gmg_macros.h"
 #include "gmg_types.h"
-#include "ssd1306_config.h"
+#include "ssd1306spi_config.h"
 //>>----------------------  Private
 
 /**
@@ -25,7 +25,13 @@
  */
 static uint8_t send_command(uint8_t cmd)
 {
-    HAL_I2C_Mem_Write(&I2C_HANDLE, SSD1306_I2C_ADDR, 0x00, 1, &cmd, 1, HAL_MAX_DELAY);
+    DC_set();
+    cs_set();
+    HAL_SPI_Transmit(&SPI_HANDLE, &cmd, 1, HAL_MAX_DELAY);
+    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
+        ;
+    cs_reset();
+    DC_reset();
     return 0;
 }
 
@@ -38,7 +44,14 @@ static uint8_t send_command(uint8_t cmd)
  */
 static uint8_t send_data(const uint8_t *data, uint16_t size)
 {
-    HAL_I2C_Mem_Write(&I2C_HANDLE, SSD1306_I2C_ADDR, 0x40, 1, (uint8_t*)data, size, HAL_MAX_DELAY);
+    DC_reset();
+    cs_set();
+
+    HAL_SPI_Transmit(&SPI_HANDLE, (uint8_t*)data, size, HAL_MAX_DELAY);
+    while (HAL_SPI_GetState(&SPI_HANDLE) != HAL_SPI_STATE_READY)
+        ;
+    cs_reset();
+    DC_set();
     return 0;
 }
 
@@ -67,7 +80,10 @@ static void delay_ms(uint32_t ms)
 
 static void ssd1306_Reset(void)
 {
-    /* for I2C - do nothing */
+    RST_set();
+    delay_ms(1);
+    RST_reset();
+    delay_ms(10);
 }
 
 /**
@@ -169,7 +185,7 @@ static uint8_t init(void)
 //<<----------------------
 
 //>>----------------------  Public
-const gmg_dev_t *ssd1306_dev(void)
+const gmg_dev_t *ssd1306spi_dev(void)
 {
     static const gmg_dev_t kSsd1306 =
     {

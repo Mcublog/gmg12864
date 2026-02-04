@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 typedef struct gmg_dev_t gmg_dev_t;
 
 #ifdef __cplusplus

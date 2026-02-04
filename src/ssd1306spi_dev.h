@@ -7,7 +7,7 @@ extern "C"
 {
 #endif
 
-    const gmg_dev_t *ssd1306_dev(void);
+    const gmg_dev_t *ssd1306spi_dev(void);
 
 #ifdef __cplusplus
 }

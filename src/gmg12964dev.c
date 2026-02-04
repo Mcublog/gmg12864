@@ -8,6 +8,8 @@
  * @copyright Viacheslav mcublog (c) 2026
  *
  */
+#include <stdint.h>
+
 #include "gmg12864dev.h"
 
 #include "gmg12864_config.h"
