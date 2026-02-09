@@ -1341,7 +1341,7 @@ int GMG12864_Sprintf(uint8_t px, uint8_t py, const char *fmt, ...)
     va_list plist;
 
     va_start(plist, fmt);
-    int res = vsniprintf((char*)buffer, SPRINTF_BUFFER_SIZE, fmt, plist);
+    int res = vsnprintf((char*)buffer, SPRINTF_BUFFER_SIZE, fmt, plist);
     va_end(plist);
 
     GMG12864_Decode_UTF8(px, py, 1, 0, (const char*)buffer);
