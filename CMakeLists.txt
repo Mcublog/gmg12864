@@ -18,7 +18,7 @@ set_property(GLOBAL PROPERTY RULE_MESSAGES OFF)
 
 # endregion
 
-project(gmg12864 VERSION 0.0.6 LANGUAGES C CXX ASM)
+project(gmg12864 VERSION 0.1.0 LANGUAGES C CXX ASM)
 
 message("Version:.........." ${CMAKE_PROJECT_VERSION})
 message("Host system:......" ${CMAKE_SYSTEM_NAME})
