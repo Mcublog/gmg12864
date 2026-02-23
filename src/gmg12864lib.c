@@ -19,7 +19,6 @@
  * http://en.radzio.dxp.pl/bitmap_converter/
  */
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -530,18 +529,23 @@ void GMG12864_Draw_pixel(int16_t x, int16_t y, uint8_t color)
     {
         return;
     }
+
+    // пишем в буфер девайса или в сам девайс
+    if (m_dev->put_pixel)
+    {
+        m_dev->put_pixel(x, y, color);
+        return;
+    }
+
+    uint16_t array_pos = x + ((y / 8) * DISP_WIDTH);
+
+    if (color)
+    {
+        Frame_buffer[array_pos] |= 1 << (y % 8);
+    }
     else
     {
-        uint16_t array_pos = x + ((y / 8) * DISP_WIDTH);
-
-        if (color)
-        {
-            Frame_buffer[array_pos] |= 1 << (y % 8);
-        }
-        else
-        {
-            Frame_buffer[array_pos] &= 0xFF ^ 1 << (y % 8);
-        }
+        Frame_buffer[array_pos] &= 0xFF ^ 1 << (y % 8);
     }
 }
 /*------------------------Функция рисования пикселя-------------------------*/
