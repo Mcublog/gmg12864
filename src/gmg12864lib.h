@@ -22,6 +22,7 @@
 #ifndef INC_GMG12864_LIB_H_
 #define INC_GMG12864_LIB_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define font3x5 (0)
