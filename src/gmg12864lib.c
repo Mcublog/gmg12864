@@ -673,7 +673,7 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
     uint8_t color = inversion ? 1 : 0;
     for (size_t i = 0; i < strlen(tx_buffer); i++)
     {
-        if (tx_buffer[i] < 0xC0)
+        if ((uint8_t)tx_buffer[i] < 0xC0)
         { // Английский текст и символы. Если до русского текста, то [i] <0xD0. Но в font
           // добавлен знак "°"
             if (flag_block)
@@ -702,7 +702,7 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
 
         else
         { // Русский текст
-            symbol = tx_buffer[i] << 8 | tx_buffer[i + 1];
+            symbol = ((uint8_t)tx_buffer[i] << 8) | ((uint8_t)tx_buffer[i + 1]);
             if (symbol < 0xD180 && symbol > 0xD081)
             {
                 if (font == font3x5)
