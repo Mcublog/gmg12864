@@ -12,6 +12,8 @@
  *
  */
 #include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <glem.h>
 
@@ -98,11 +100,12 @@ static uint8_t send_data(const uint8_t *data, uint16_t size)
 {
     if (m_coord.x == Y_GETTING && m_coord.y <= 0x07)
     {
-        // puts("fill line");
-        // memcpy(&m_buffer[size * m_coord.y], data, size);
-        if (m_coord.y == 7)
+        // NOTE: костыль для обновления всего буфера, чтобы приблизить поведение
+        // к настоящему дисплею. После вывода дисплея очищаем внутренний буфер.
+        if (m_coord.y == ((DISP_HEIGHT / 8) - 1))
         {
             glem_write(m_buffer, sizeof(m_buffer));
+            memset(m_buffer, 0x00, sizeof(m_buffer));
         }
         m_coord.x = 0;
         m_coord.y = 0;
