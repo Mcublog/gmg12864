@@ -555,9 +555,12 @@ void GMG12864_Update(void)
 {
 #ifdef GMG12864_OLED
     static const uint16_t kX = 2;
+#elif defined(GMG12864_X_OFFSET)
+    static const uint16_t kX = GMG12864_X_OFFSET;
 #else
     static const uint16_t kX = 0;
 #endif
+
     for (int16_t y = 0; y < 8; ++y)
     {
         ST7565_SetX(kX);
