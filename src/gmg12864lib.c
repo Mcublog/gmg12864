@@ -1366,7 +1366,7 @@ int GMG12864_Sprintf(uint8_t px, uint8_t py, const char *fmt, ...)
 int GMG12864_Puts(uint8_t px, uint8_t py, const char *text)
 {
     uint8_t buffer[SPRINTF_BUFFER_SIZE + 1];
-    int res = snprintf((char*)buffer, SPRINTF_BUFFER_SIZE, text);
+    int res = snprintf((char*)buffer, SPRINTF_BUFFER_SIZE, "%s", text);
     GMG12864_Decode_UTF8(px, py, 1, 0, (const char*)buffer);
     return res;
 }
