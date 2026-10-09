@@ -10,6 +10,7 @@ file(GLOB_RECURSE SOURCES
 add_executable(${target}
     ${SOURCES}
     ${PROJECT_SOURCE_DIR}/src/gmg12864lib.c
+    ${PROJECT_SOURCE_DIR}/src/gmg12864menu.c
     ${PROJECT_SOURCE_DIR}/src/dev/glem_dev.c
 )
 

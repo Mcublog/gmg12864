@@ -48,10 +48,8 @@ extern "C"
     void GMG12864_DrawBitmap(const uint8_t *bitmap, int8_t x, int8_t y, int8_t w,
                              int8_t h);
     void GMG12864_Draw_pixel(int16_t x, int16_t y, uint8_t color);
-    void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol,
-                                   uint8_t inversion);
-    void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol,
-                                   uint8_t inversion);
+    void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol, bool inversion);
+    void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol, bool inversion);
     void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
                               const char *tx_buffer);
     void GMG12864_Inversion(uint16_t x_start, uint16_t x_end);
@@ -76,6 +74,17 @@ extern "C"
 
     int GMG12864_Sprintf(uint8_t px, uint8_t py, const char *fmt, ...);
     int GMG12864_Puts(uint8_t px, uint8_t py, const char *text);
+    int GMG12864_Sprintf_inv(uint8_t px, uint8_t py, bool inversion, const char *fmt, ...);
+    int GMG12864_Puts_inv(uint8_t px, uint8_t py, bool inversion, const char *text);
+
+    /*--------------------------- Мигание (blink) ---------------------------*/
+    /* Функцию GMG12864_Tick() необходимо вызывать раз в 1 мс (SysTick, TIM,
+     * RTOS timer task и т.п.). Реализация меню, моргающего цветом, основывается
+     * на этом таймере. */
+    void GMG12864_Tick(void);
+    void GMG12864_Blink_Set_period(uint16_t period_ms);
+    void GMG12864_Blink_Enable(bool enable);
+    bool GMG12864_Blink_State(void);
 
     void GMG12864_Set_contrast(uint8_t contrast);
 
