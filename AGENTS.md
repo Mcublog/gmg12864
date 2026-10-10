@@ -13,14 +13,15 @@
 ```sh
 cmake -B build && cmake --build build
 glem -r 128x64 -s4 & ./build/example/glem/example_glem
+./build/example/glem-menu/example_glem_menu </dev/null  # авто-демо без терминала
 ```
 
 - Пример линкуется с внешней библиотекой эмулятора `glem`: заголовки
   `~/.local/include/experments`, библиотека `~/.local/lib/experments`. Нужные
   `CPATH`/`LIBRARY_PATH`/`LD_LIBRARY_PATH` уже экспортированы в `~/.bashrc`
   (`example/glem/README.md`). Без glem cmake не конфигурируется.
-- `example/glem/CMakeLists.txt` собирает свои `*.c` через `GLOB_RECURSE` — новый
-  файл в `example/glem/` требует повторного `cmake -B build`. При этом
+- `example/glem*/CMakeLists.txt` собирают свои `*.c` через `GLOB_RECURSE` — новый
+  файл в `example/glem*/` требует повторного `cmake -B build`. При этом
   `src/gmg12864lib.c`, `src/gmg12864menu.c` и `src/dev/glem_dev.c` перечислены
   там же явно: новый модуль в `src/` добавляйте в тот же target вручную.
 - Корневой `CMakeLists.txt` на не-Linux хосте форсит `CMAKE_SYSTEM_NAME Generic`
@@ -28,6 +29,12 @@ glem -r 128x64 -s4 & ./build/example/glem/example_glem
 
 ## Структура
 
+- `example/glem/` — минимальный пример (target `example_glem`): лого, текст,
+  примитивы, без ввода.
+- `example/glem-menu/` — пример с меню и кнопками (target `example_glem_menu`):
+  `main.c` (суперцикл), `tty_keys.c/h` (десктопный ввод, единственное место с
+  POSIX), `btn.c/h` (антидребезг, авто-повтор, долгое нажатие, очередь),
+  `app.c/h` (меню, отрисовка, реакция на кнопки).
 - `src/gmg12864lib.c` — графическое ядро, шрифты `Font_3x5`/`Font_5x7`, статический
   frame buffer, весь рисующий API из `gmg12864lib.h`.
 - `src/gmg12864menu.c` — виджет меню (`GMG_Menu_*`), поверх ядра.
@@ -61,8 +68,8 @@ glem -r 128x64 -s4 & ./build/example/glem/example_glem
   выделение (`GMG_Menu_Up/Down`) зациклено и пропускает `enabled == false`.
 - `menu->top` (прокрутка) пересчитывается только внутри `GMG_Menu_Up/Down` —
   писать в `selected`/`top` напрямую нельзя, выделение уедет за видимую область.
-- `example/glem/main.c` определяет `_DEFAULT_SOURCE` ради `usleep` в strict c11 —
-  не удаляйте при правках примера.
+- `example/glem-menu/main.c` и `example/glem-menu/tty_keys.c` определяют `_DEFAULT_SOURCE`
+  ради `usleep`/`poll` в strict c11 — не удаляйте при правках примера.
 
 ## Соглашения
 
