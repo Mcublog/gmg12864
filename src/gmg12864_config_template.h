@@ -18,4 +18,6 @@ extern SPI_HandleTypeDef SPI_HANDLE; //Используемая шина spi
 
 // #define GMG12864_X_OFFSET (2U) // опциональный офсет в пикселях по оси X при выводе изображения
 
+// #define GMG12864_BLINK_PERIOD_MS (500U) // период мигания (blink) в мс, по умолчанию 500 мс
+
 #endif // GMG12864_CONFIG_TEMPLATE_H

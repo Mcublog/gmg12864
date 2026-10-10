@@ -33,11 +33,22 @@
 #define DISP_HEIGHT_BYTES       (DISP_HEIGHT / 8U) // Высота дисплея в байтах
 #define SPRINTF_BUFFER_SIZE     (64U)
 
+#ifndef GMG12864_BLINK_PERIOD_MS
+#define GMG12864_BLINK_PERIOD_MS (500U) // Период мигания (blink) в мс. Полупериод
+                                        // (время в одной фазе) = период/2
+#endif
+
 static char tx_buffer[DISP_WIDTH] = {0}; // Буфер для отправки текста на дисплей
 static uint8_t Frame_buffer[DISP_HEIGHT_BYTES * DISP_WIDTH] = {0}; // Буфер кадра
 
 // Для работы отрисовки графика:
 static bool array_is_full = 0; // значения заполнили массив, можно сдвигать график влево
+
+// Для работы мигания (blink):
+static uint32_t blink_ms_counter = 0; // Счетчик миллисекунд
+static uint16_t blink_period_ms = GMG12864_BLINK_PERIOD_MS; // Период мигания
+static bool blink_enable = 0;         // Мигание разрешено
+static bool blink_state = 0;          // Текущая фаза мигания
 
 static const gmg_dev_t *m_dev = NULL;
 /*-----------------------------------Настройки----------------------------------*/
@@ -447,18 +458,18 @@ void GMG12864_logo_demonstration(void)
     }
     GMG12864_Update();
     sprintf(tx_buffer, "Saint Petersburg");
-    GMG12864_Decode_UTF8(16, 40, 1, 0, tx_buffer);
+    GMG12864_Decode_UTF8(16, 40, font5x7, inversion_off, tx_buffer);
     sprintf(tx_buffer, "electronics lab.");
-    GMG12864_Decode_UTF8(18, 48, 1, 0, tx_buffer);
+    GMG12864_Decode_UTF8(18, 48, font5x7, inversion_off, tx_buffer);
     m_dev->delay_ms(500);
     GMG12864_Update();
     m_dev->delay_ms(3000);
     sprintf(tx_buffer, "                ");
-    GMG12864_Decode_UTF8(18, 48, 1, 0, tx_buffer);
+    GMG12864_Decode_UTF8(18, 48, font5x7, inversion_off, tx_buffer);
     m_dev->delay_ms(500);
     GMG12864_Update();
     sprintf(tx_buffer, "                ");
-    GMG12864_Decode_UTF8(16, 40, 1, 0, tx_buffer);
+    GMG12864_Decode_UTF8(16, 40, font5x7, inversion_off, tx_buffer);
     m_dev->delay_ms(500);
     GMG12864_Update();
 
@@ -571,7 +582,7 @@ void GMG12864_Update(void)
 /*---------------------Функция вывода буфера кадра на дисплей------------------------*/
 
 /*---------------------Функция вывода символа на дисплей-----------------------------*/
-void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol, uint8_t inversion)
+void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol, bool inversion)
 {
     /// Функция вывода символа на дисплей
     uint8_t x_start = x;    // начальное положение по x
@@ -584,13 +595,11 @@ void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
             { // от 0 до 6, т.к. шрифт высотой 7 пикселей
                 if (0x00 & (1 << i))
                 {
-                    uint8_t color = inversion ? 0 : 1;
-                    GMG12864_Draw_pixel(x, y + i, color);
+                    GMG12864_Draw_pixel(x, y + i, inversion ? inversion_off : inversion_on);
                 }
                 else
                 {
-                    uint8_t color = inversion ? 1 : 0;
-                    GMG12864_Draw_pixel(x, y + i, color);
+                    GMG12864_Draw_pixel(x, y + i, inversion ? inversion_on : inversion_off);
                 }
             }
         }
@@ -600,13 +609,11 @@ void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
             { // от 0 до 6, т.к. шрифт высотой 7 пикселей
                 if (Font_5x7[(symbol * 5) + x - x_start] & (1 << i))
                 {
-                    uint8_t color = inversion ? 0 : 1;
-                    GMG12864_Draw_pixel(x, y + i, color);
+                    GMG12864_Draw_pixel(x, y + i, inversion ? inversion_off : inversion_on);
                 }
                 else
                 {
-                    uint8_t color = inversion ? 1 : 0;
-                    GMG12864_Draw_pixel(x, y + i, color);
+                    GMG12864_Draw_pixel(x, y + i, inversion ? inversion_on : inversion_off);
                 }
             }
         }
@@ -615,7 +622,7 @@ void GMG12864_Print_symbol_5x7(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
 /*---------------------Функция вывода символа на дисплей-----------------------------*/
 
 /*---------------------Функция вывода символа на дисплей-----------------------------*/
-void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol, uint8_t inversion)
+void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol, bool inversion)
 {
     /// Функция вывода символа на дисплей
     uint8_t x_start = x;    // начальное положение по x
@@ -625,32 +632,28 @@ void GMG12864_Print_symbol_3x5(uint8_t x, uint8_t y, uint16_t symbol, uint8_t in
         if (x == x_stop)
         { // Заполняем межсимвольные интервалы
             for (uint8_t i = 0; i <= 4; i++)
-            { // от 0 до 6, т.к. шрифт высотой 7 пикселей
+            { // от 0 до 4, т.к. шрифт высотой 5 пикселей
                 if (0x00 & (1 << i))
                 {
-                    uint8_t color = inversion ? 0 : 1;
-                    GMG12864_Draw_pixel(x, y + i, color);
+                    GMG12864_Draw_pixel(x, y + i, inversion ? inversion_off : inversion_on);
                 }
                 else
                 {
-                    uint8_t color = inversion ? 1 : 0;
-                    GMG12864_Draw_pixel(x, y + i, color);
+                    GMG12864_Draw_pixel(x, y + i, inversion ? inversion_on : inversion_off);
                 }
             }
         }
         else
         { // Заполняем полезной информацией
             for (uint8_t i = 0; i <= 4; i++)
-            { // от 0 до 6, т.к. шрифт высотой 7 пикселей
+            { // от 0 до 4, т.к. шрифт высотой 5 пикселей
                 if (Font_3x5[(symbol * 3) + x - x_start] & (1 << i))
                 {
-                    uint8_t color = inversion ? 0 : 1;
-                    GMG12864_Draw_pixel(x, y + i, color);
+                    GMG12864_Draw_pixel(x, y + i, inversion ? inversion_off : inversion_on);
                 }
                 else
                 {
-                    uint8_t color = inversion ? 1 : 0;
-                    GMG12864_Draw_pixel(x, y + i, color);
+                    GMG12864_Draw_pixel(x, y + i, inversion ? inversion_on : inversion_off);
                 }
             }
         }
@@ -673,7 +676,6 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
 {
     uint16_t symbol = 0;
     bool flag_block = 0;
-    uint8_t color = inversion ? 1 : 0;
     for (size_t i = 0; i < strlen(tx_buffer); i++)
     {
         if ((uint8_t)tx_buffer[i] < 0xC0)
@@ -690,14 +692,14 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
                 {
                     // Таблица UTF-8. Basic Latin. С
                     // "пробел" до "z". Инверсия вкл.
-                    GMG12864_Print_symbol_3x5(x, y, symbol - 32, color);
+                    GMG12864_Print_symbol_3x5(x, y, symbol - 32, inversion);
                     x = x + 4;
                 }
                 else if (font == font5x7)
                 {
                     // Таблица UTF-8. Basic Latin. С
                     // "пробел" до "z". Инверсия вкл.
-                    GMG12864_Print_symbol_5x7(x, y, symbol - 32, color);
+                    GMG12864_Print_symbol_5x7(x, y, symbol - 32, inversion);
                     x = x + 6;
                 }
             }
@@ -712,14 +714,14 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
                 {
                     // Таблица UTF-8. Кириллица. С буквы
                     // "А" до "п". Инверсия вкл.
-                    GMG12864_Print_symbol_3x5(x, y, symbol - 53297, color);
+                    GMG12864_Print_symbol_3x5(x, y, symbol - 53297, inversion);
                     x = x + 4;
                 }
                 else if (font == font5x7)
                 {
                     // Таблица UTF-8. Кириллица. С буквы
                     // "А" до "п". Инверсия вкл.
-                    GMG12864_Print_symbol_5x7(x, y, symbol - 53297, color);
+                    GMG12864_Print_symbol_5x7(x, y, symbol - 53297, inversion);
                     x = x + 6;
                 }
             }
@@ -728,13 +730,13 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
                 if (font == font3x5)
                 {
                     //Таблица UTF-8. Кириллица. Буква "Ё". Инверсия вкл.
-                    GMG12864_Print_symbol_3x5(x, y, 159, color);
+                    GMG12864_Print_symbol_3x5(x, y, 159, inversion);
                     x = x + 4;
                 }
                 else if (font == font5x7)
                 {
                     //Таблица UTF-8. Кириллица. Буква "Ё". Инверсия вкл.
-                    GMG12864_Print_symbol_5x7(x, y, 159, color);
+                    GMG12864_Print_symbol_5x7(x, y, 159, inversion);
                     x = x + 6;
                 }
             }
@@ -743,13 +745,13 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
                 if (font == font3x5)
                 {
                     //Таблица UTF-8. Кириллица. Буква "ё". Инверсия вкл.
-                    GMG12864_Print_symbol_3x5(x, y, 160, color);
+                    GMG12864_Print_symbol_3x5(x, y, 160, inversion);
                     x = x + 4;
                 }
                 else if (font == font5x7)
                 {
                     //Таблица UTF-8. Кириллица. Буква "ё". Инверсия вкл.
-                    GMG12864_Print_symbol_5x7(x, y, 160, color);
+                    GMG12864_Print_symbol_5x7(x, y, 160, inversion);
                     x = x + 6;
                 }
             }
@@ -758,13 +760,13 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
                 if (font == font3x5)
                 {
                     //Таблица UTF-8. Basic Latin. Символ "°". Инверсия вкл.
-                    GMG12864_Print_symbol_3x5(x, y, 161, color);
+                    GMG12864_Print_symbol_3x5(x, y, 161, inversion);
                     x = x + 4;
                 }
                 else if (font == font5x7)
                 {
                     //Таблица UTF-8. Basic Latin. Символ "°". Инверсия вкл.
-                    GMG12864_Print_symbol_5x7(x, y, 161, color);
+                    GMG12864_Print_symbol_5x7(x, y, 161, inversion);
                     x = x + 6;
                 }
             }
@@ -775,14 +777,14 @@ void GMG12864_Decode_UTF8(uint8_t x, uint8_t y, uint8_t font, bool inversion,
                 {
                     // Таблица UTF-8. Кириллица. С буквы "р", начинается
                     // сдвиг. Инверсия вкл.
-                    GMG12864_Print_symbol_3x5(x, y, symbol - 53489, color);
+                    GMG12864_Print_symbol_3x5(x, y, symbol - 53489, inversion);
                     x = x + 4;
                 }
                 else if (font == font5x7)
                 {
                     // Таблица UTF-8. Кириллица. С буквы "р", начинается
                     // сдвиг. Инверсия вкл.
-                    GMG12864_Print_symbol_5x7(x, y, symbol - 53489, color);
+                    GMG12864_Print_symbol_5x7(x, y, symbol - 53489, inversion);
                     x = x + 6;
                 }
             }
@@ -825,14 +827,14 @@ uint8_t GMG12864_Value_for_Plot(int y_min, int y_max, float value)
     {
         Graph_value = 50;
         sprintf(text, "   Clipping    ");
-        GMG12864_Decode_UTF8(37, 26, 1, 0, text);
+        GMG12864_Decode_UTF8(37, 26, font5x7, inversion_off, text);
         GMG12864_Update();
     }
     else if (value < y_min)
     {
         Graph_value = 0;
         sprintf(text, "   Clipping    ");
-        GMG12864_Decode_UTF8(37, 26, 1, 0, text);
+        GMG12864_Decode_UTF8(37, 26, font5x7, inversion_off, text);
         GMG12864_Update();
     }
     return Graph_value;
@@ -930,17 +932,17 @@ void GMG12864_Generate_a_Graph(uint8_t *counter, uint8_t *array, uint8_t size_ar
     };
     GMG12864_Clean_Frame_buffer();
     sprintf(text, "%4.1d", y_min);
-    GMG12864_Decode_UTF8(8, 48, 0, 0, text);
+    GMG12864_Decode_UTF8(8, 48, font3x5, inversion_off, text);
     sprintf(text, "%4.1d", (y_min + val_del));
-    GMG12864_Decode_UTF8(8, 38, 0, 0, text);
+    GMG12864_Decode_UTF8(8, 38, font3x5, inversion_off, text);
     sprintf(text, "%4.1d", (y_min + val_del * 2));
-    GMG12864_Decode_UTF8(8, 28, 0, 0, text);
+    GMG12864_Decode_UTF8(8, 28, font3x5, inversion_off, text);
     sprintf(text, "%4.1d", (y_min + val_del * 3));
-    GMG12864_Decode_UTF8(8, 18, 0, 0, text);
+    GMG12864_Decode_UTF8(8, 18, font3x5, inversion_off, text);
     sprintf(text, "%4.1d", (y_min + val_del * 4));
-    GMG12864_Decode_UTF8(8, 8, 0, 0, text);
+    GMG12864_Decode_UTF8(8, 8, font3x5, inversion_off, text);
     sprintf(text, "%4.1d", y_max);
-    GMG12864_Decode_UTF8(8, 0, 0, 0, text);
+    GMG12864_Decode_UTF8(8, 0, font3x5, inversion_off, text);
 
     if (time_interval == 0)
     {
@@ -954,7 +956,7 @@ void GMG12864_Generate_a_Graph(uint8_t *counter, uint8_t *array, uint8_t size_ar
     {
         sprintf(text, "%2.1dчас.", x_grid_time);
     }
-    GMG12864_Decode_UTF8(53, 57, 1, 0, text);
+    GMG12864_Decode_UTF8(53, 57, font5x7, inversion_off, text);
 
     /*----------------Ось асцисс, ось ординат, разметка-----------------*/
 
@@ -1334,7 +1336,7 @@ void GMG12864_Draw_triangle_filled(uint16_t x1, uint16_t y1, uint16_t x2, uint16
 }
 
 /**
- * @brief
+ * @brief Вывод форматированной строки без инверсии
  *
  * @param px
  * @param py
@@ -1351,24 +1353,124 @@ int GMG12864_Sprintf(uint8_t px, uint8_t py, const char *fmt, ...)
     int res = vsnprintf((char*)buffer, SPRINTF_BUFFER_SIZE, fmt, plist);
     va_end(plist);
 
-    GMG12864_Decode_UTF8(px, py, 1, 0, (const char*)buffer);
+    GMG12864_Decode_UTF8(px, py, font5x7, inversion_off, (const char*)buffer);
     return res;
 }
 
 /**
- * @brief
+ * @brief Вывод форматированной строки с возможностью инверсии.
+ * При inversion = inversion_on текст выводится "вырезанным" (цветом 0). Поэтому
+ * подложку под текст нужно закрасить заранее, например через
+ * GMG12864_Draw_rectangle_filled(..., inversion_on)
  *
- * @param px
- * @param py
- * @param text
+ * @param px - координата по х. От 0 до 127
+ * @param py - координата по y в пикселях. От 0 до 57
+ * @param inversion - inversion_off/inversion_on
+ * @param fmt - форматная строка
+ * @param ...
+ * @return int - то же, что возвращает vsnprintf
+ */
+int GMG12864_Sprintf_inv(uint8_t px, uint8_t py, bool inversion, const char *fmt, ...)
+{
+    uint8_t buffer[SPRINTF_BUFFER_SIZE + 1];
+    va_list plist;
+
+    va_start(plist, fmt);
+    int res = vsnprintf((char*)buffer, SPRINTF_BUFFER_SIZE, fmt, plist);
+    va_end(plist);
+
+    GMG12864_Decode_UTF8(px, py, font5x7, inversion, (const char*)buffer);
+    return res;
+}
+
+/**
+ * @brief Вывод строки без инверсии
+ *
+ * @param px - координата по х. От 0 до 127
+ * @param py - координата по y в пикселях. От 0 до 57
+ * @param text - указатель на строку
  * @return int
  */
 int GMG12864_Puts(uint8_t px, uint8_t py, const char *text)
 {
     uint8_t buffer[SPRINTF_BUFFER_SIZE + 1];
     int res = snprintf((char*)buffer, SPRINTF_BUFFER_SIZE, "%s", text);
-    GMG12864_Decode_UTF8(px, py, 1, 0, (const char*)buffer);
+    GMG12864_Decode_UTF8(px, py, font5x7, inversion_off, (const char*)buffer);
     return res;
+}
+
+/**
+ * @brief Вывод строки с возможностью инверсии.
+ * При inversion = inversion_on текст выводится "вырезанным" (цветом 0). Поэтому
+ * подложку под текст нужно закрасить заранее, например через
+ * GMG12864_Draw_rectangle_filled(..., inversion_on)
+ *
+ * @param px - координата по х. От 0 до 127
+ * @param py - координата по y в пикселях. От 0 до 57
+ * @param inversion - inversion_off/inversion_on
+ * @param text - указатель на строку
+ * @return int
+ */
+int GMG12864_Puts_inv(uint8_t px, uint8_t py, bool inversion, const char *text)
+{
+    uint8_t buffer[SPRINTF_BUFFER_SIZE + 1];
+    int res = snprintf((char*)buffer, SPRINTF_BUFFER_SIZE, "%s", text);
+    GMG12864_Decode_UTF8(px, py, font5x7, inversion, (const char*)buffer);
+    return res;
+}
+
+/*-------------------------Функция мигания (blink)-------------------------*/
+/**
+ * @brief Служебная функция. Вызывать один раз в 1 мс. Обеспечивает переключение
+ * фазы мигания. Источник времени - внешний (SysTick, таймер, RTOS)
+ */
+void GMG12864_Tick(void)
+{
+    uint16_t period = blink_period_ms ? blink_period_ms : 1U;
+    blink_ms_counter++;
+    if (blink_ms_counter >= period)
+    {
+        blink_ms_counter = 0;
+        blink_state = !blink_state;
+    }
+}
+
+/**
+ * @brief Установка периода мигания (blink)
+ *
+ * \param uint16_t period_ms - период мигания в мс. Не менше 1 мс
+ */
+void GMG12864_Blink_Set_period(uint16_t period_ms)
+{
+    if (period_ms)
+    {
+        blink_period_ms = period_ms;
+    }
+    blink_ms_counter = 0;
+}
+
+/**
+ * @brief Включение/выключение мигания
+ *
+ * \param bool enable - 1 - мигание работает, 0 - мигание выключено
+ */
+void GMG12864_Blink_Enable(bool enable)
+{
+    blink_enable = enable;
+    blink_ms_counter = 0;
+    blink_state = 0;
+}
+
+/**
+ * @brief Текущая фаза мигания.
+ * Используется виджетами (меню) для отрисовки моргающей подсветки
+ *
+ * \return bool - 1 - фаза "включено" (нарисовать подсветку),
+ * 0 - фаза "выключено" (подсветку не рисовать)
+ */
+bool GMG12864_Blink_State(void)
+{
+    return blink_enable && blink_state;
 }
 
 /**

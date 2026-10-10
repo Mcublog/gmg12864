@@ -1,4 +1,4 @@
-set(target example_glem)
+set(target example_glem_menu)
 
 # Add sources
 file(GLOB_RECURSE SOURCES
